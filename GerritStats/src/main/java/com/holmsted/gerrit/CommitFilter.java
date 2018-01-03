@@ -21,6 +21,7 @@ public class CommitFilter {
     }
 
     public void setIncludedEmails(@Nonnull List<String> excludeEmails) {
+        System.out.println("Including only: " + excludeEmails);
         this.includedEmails.addAll(excludeEmails);
     }
 
@@ -41,7 +42,7 @@ public class CommitFilter {
     }
 
     public boolean isIncluded(@Nullable Commit.Identity identity) {
-        if (identity == null || identity.email == null) {
+        if (identity == null || identity.email == null || identity.email.isEmpty()) {
             return includeEmptyEmails;
         } else {
             if (!includedEmails.isEmpty()) {

@@ -15,9 +15,11 @@ import javax.annotation.Nonnull;
 public class PerPersonDataProcessor extends CommitDataProcessor<PerPersonData> {
 
     private final PerPersonData records = new PerPersonData();
+    private final MailMap mailMap;
 
-    public PerPersonDataProcessor(@Nonnull CommitFilter filter, @Nonnull OutputRules outputRules) {
+    public PerPersonDataProcessor(@Nonnull CommitFilter filter, @Nonnull OutputRules outputRules, MailMap mailMap) {
         super(filter, outputRules);
+        this.mailMap = mailMap;
     }
 
     @Override
@@ -40,6 +42,8 @@ public class PerPersonDataProcessor extends CommitDataProcessor<PerPersonData> {
                 }
 
                 for (Commit.Identity identity : commit.reviewers) {
+                    identity = mailMap.mapIdentity(identity);
+
                     if (!getCommitFilter().isIncluded(identity)) {
                         continue;
                     }
@@ -124,6 +128,7 @@ public class PerPersonDataProcessor extends CommitDataProcessor<PerPersonData> {
 
     @Nonnull
     private IdentityRecord getOrCreateRecord(@Nonnull Commit.Identity identity) {
+        identity = mailMap.mapIdentity(identity);
         IdentityRecord identityRecord = records.get(identity);
         if (identityRecord == null) {
             identityRecord = new IdentityRecord(identity);
@@ -131,4 +136,5 @@ public class PerPersonDataProcessor extends CommitDataProcessor<PerPersonData> {
         }
         return identityRecord;
     }
+
 }

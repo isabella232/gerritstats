@@ -2,6 +2,7 @@ package com.holmsted.gerrit;
 
 import com.holmsted.file.FileReader;
 import com.holmsted.gerrit.GerritStatParser.GerritData;
+import com.holmsted.gerrit.processors.perperson.MailMap;
 import com.holmsted.gerrit.processors.perperson.PerPersonDataProcessor;
 
 import java.io.File;
@@ -24,6 +25,9 @@ public final class GerritStatsMain {
             return;
         }
 
+        MailMap mailMap = new MailMap();
+        mailMap.readMailMap(new File(commandLine.getMailMapFile()));
+
         CommitFilter filter = new CommitFilter();
         filter.setIncludeEmptyEmails(false);
         filter.setIncludedEmails(commandLine.getIncludedEmails());
@@ -31,7 +35,7 @@ public final class GerritStatsMain {
         filter.setIncludeBranches(commandLine.getIncludeBranches());
 
         List<Commit> commits = new ArrayList<>();
-        GerritStatParser commitDataParser = new GerritStatParser();
+        GerritStatParser commitDataParser = new GerritStatParser(mailMap);
 
         List<String> filenames = processFilenames(commandLine.getFilenames());
         GerritVersion minVersion = GerritVersion.makeInvalid();
@@ -60,7 +64,7 @@ public final class GerritStatsMain {
             queryData = queryData.anonymize();
         }
 
-        PerPersonDataProcessor perPersonFormatter = new PerPersonDataProcessor(filter, outputRules);
+        PerPersonDataProcessor perPersonFormatter = new PerPersonDataProcessor(filter, outputRules, mailMap);
         perPersonFormatter.invoke(queryData);
     }
 

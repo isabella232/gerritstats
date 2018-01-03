@@ -36,14 +36,14 @@ public class CommandLineParser {
     private final List<String> excludedEmails = new ArrayList<>();
     @Parameter(names = "--branches",
             description = "If specified, only the comma-separated list of branches "
-            + "will be included for analysis. If omitted, all available branches will be inspected.")
+                    + "will be included for analysis. If omitted, all available branches will be inspected.")
     @Nonnull
     private final List<String> includedBranches = new ArrayList<>();
 
     @Parameter(names = "--include",
             description = "If specified, only the comma-separated list of identities "
-            + "will be included in generated statistics. If both --include and --exclude are "
-            + "specified, --exclude is ignored.")
+                    + "will be included in generated statistics. If both --include and --exclude are "
+                    + "specified, --exclude is ignored.")
     @Nonnull
     private final List<String> includedEmails = new ArrayList<>();
 
@@ -51,6 +51,10 @@ public class CommandLineParser {
             description = "The output will be generated into the given directory.")
     @Nonnull
     private String outputDir = DEFAULT_OUTPUT_DIR; // NOPMD
+
+    @Parameter(names = {"-m", "--mailmap"}, description = "The mailmap file. Default: `.mailmap`")
+    @Nonnull
+    private String mailMapFile = ".mailmap";
 
     @Parameter(names = {"-a", "--anonymize"},
             description = "Replace real data, like user name and email, with generated identities, "
@@ -89,7 +93,7 @@ public class CommandLineParser {
             return false;
         }
         filenames = filenames.stream().map(CommandLineParser::resolveHomeDir)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
 
         return !filenames.isEmpty();
     }
@@ -130,6 +134,10 @@ public class CommandLineParser {
 
     public boolean isAnonymizeDataEnabled() {
         return anonymizeData;
+    }
+
+    public String getMailMapFile() {
+        return mailMapFile;
     }
 
     public void printUsage() {

@@ -7,11 +7,18 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.holmsted.gerrit.processors.perperson.MailMap;
 import com.holmsted.json.JsonUtils;
 
 import javax.annotation.Nonnull;
 
 public class GerritStatParser {
+
+    private final MailMap mailMap;
+
+    public GerritStatParser(MailMap mailMap) {
+        this.mailMap = mailMap;
+    }
 
     public static class ParserContext {
         final GerritVersion version;
@@ -63,7 +70,7 @@ public class GerritStatParser {
         for (int i = 0; i < jsonCommits.length(); ++i) {
             JSONObject jsonCommit = jsonCommits.getJSONObject(i);
             if (Commit.isCommit(jsonCommit)) {
-                data.commits.add(Commit.fromJson(jsonCommit, context));
+                data.commits.add(Commit.fromJson(jsonCommit, context, mailMap));
             }
         }
 
@@ -86,7 +93,7 @@ public class GerritStatParser {
             try {
                 JSONObject lineJson = JsonUtils.readJsonString(line);
                 if (Commit.isCommit(lineJson)) {
-                    data.commits.add(Commit.fromJson(lineJson, context));
+                    data.commits.add(Commit.fromJson(lineJson, context, mailMap));
                     // ignore the stats, log the rest in case the format changes
                 } else if (!lineJson.get("type").equals("stats")) {
                     System.err.println("Ignored line " + line);

@@ -3,6 +3,7 @@ package com.holmsted.gerrit;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.holmsted.gerrit.GerritStatParser.ParserContext;
+import com.holmsted.gerrit.processors.perperson.MailMap;
 import com.holmsted.json.JsonUtils;
 
 import org.json.JSONArray;
@@ -54,19 +55,21 @@ public class Commit {
             this.username = username;
         }
 
-        public static Identity fromJson(JSONObject ownerJson) {
-            return new Identity(ownerJson.optString("name"),
+        public static Identity fromJson(JSONObject ownerJson, MailMap mailMap) {
+            Identity identity = new Identity(ownerJson.optString("name"),
                     ownerJson.optString("email"),
                     ownerJson.optString("username"));
+            if (mailMap != null) identity = mailMap.mapIdentity(identity);
+            return identity;
         }
 
         @Nonnull
-        static List<Identity> fromJsonArray(@Nullable JSONArray identitiesJson) {
+        static List<Identity> fromJsonArray(@Nullable JSONArray identitiesJson, MailMap mailMap) {
             List<Identity> result = new ArrayList<>();
             if (identitiesJson != null) {
                 for (int i = 0; i < identitiesJson.length(); ++i) {
                     JSONObject identityJson = identitiesJson.getJSONObject(i);
-                    result.add(Identity.fromJson(identityJson));
+                    result.add(Identity.fromJson(identityJson, mailMap));
                 }
             }
             return result;
@@ -149,19 +152,19 @@ public class Commit {
             this.message = message;
         }
 
-        static ChangeComment fromJson(JSONObject commentJson) {
+        static ChangeComment fromJson(JSONObject commentJson, MailMap mailMap) {
             return new ChangeComment(
                     commentJson.optLong("timestamp") * SEC_TO_MSEC,
-                    Identity.fromJson(commentJson.optJSONObject("reviewer")),
+                    Identity.fromJson(commentJson.optJSONObject("reviewer"), mailMap),
                     commentJson.optString("message"));
         }
 
-        static List<ChangeComment> fromJsonArray(@Nullable JSONArray comments) {
+        static List<ChangeComment> fromJsonArray(@Nullable JSONArray comments, MailMap mailMap) {
             List<ChangeComment> result = new ArrayList<>();
             if (comments != null) {
                 for (int i = 0; i < comments.length(); ++i) {
                     JSONObject commentJson = comments.getJSONObject(i);
-                    result.add(ChangeComment.fromJson(commentJson));
+                    result.add(ChangeComment.fromJson(commentJson, mailMap));
                 }
             }
             return result;
@@ -191,23 +194,23 @@ public class Commit {
         }
 
         @Nonnull
-        public static List<Approval> fromJson(@Nullable JSONArray approvals) {
+        public static List<Approval> fromJson(@Nullable JSONArray approvals, MailMap mailMap) {
             List<Approval> result = new ArrayList<>();
             if (approvals != null) {
                 for (int i = 0; i < approvals.length(); ++i) {
-                    result.add(Approval.fromJson(approvals.getJSONObject(i)));
+                    result.add(Approval.fromJson(approvals.getJSONObject(i), mailMap));
                 }
             }
             return result;
         }
 
-        public static Approval fromJson(JSONObject approvalJson) {
+        public static Approval fromJson(JSONObject approvalJson, MailMap mailMap) {
             return new Approval(
                     approvalJson.optString("type"),
                     approvalJson.optString("description"),
                     approvalJson.optInt("value"),
                     approvalJson.optLong("grantedOn") * SEC_TO_MSEC,
-                    Identity.fromJson(approvalJson.getJSONObject("by"))
+                    Identity.fromJson(approvalJson.getJSONObject("by"), mailMap)
             );
         }
     }
@@ -238,22 +241,22 @@ public class Commit {
         }
 
         @Nonnull
-        public static PatchSetComment fromJson(JSONObject commentJson, long createdOnDate) {
+        public static PatchSetComment fromJson(JSONObject commentJson, long createdOnDate, MailMap mailMap) {
             return new PatchSetComment(
                     commentJson.optString("file"),
                     commentJson.optInt("line"),
-                    Identity.fromJson(commentJson.getJSONObject("reviewer")),
+                    Identity.fromJson(commentJson.getJSONObject("reviewer"), mailMap),
                     commentJson.optString("message"),
                     createdOnDate
             );
         }
 
         @Nonnull
-        public static List<PatchSetComment> fromJson(@Nullable JSONArray comments, long createdOnDate) {
+        public static List<PatchSetComment> fromJson(@Nullable JSONArray comments, long createdOnDate, MailMap mailMap) {
             List<PatchSetComment> result = new ArrayList<>();
             if (comments != null) {
                 for (int i = 0; i < comments.length(); ++i) {
-                    result.add(PatchSetComment.fromJson(comments.getJSONObject(i), createdOnDate));
+                    result.add(PatchSetComment.fromJson(comments.getJSONObject(i), createdOnDate, mailMap));
                 }
             }
             return result;
@@ -323,12 +326,12 @@ public class Commit {
             this.sizeDeletions = sizeDeletions;
         }
 
-        static List<PatchSet> fromJsonArray(@Nullable JSONArray patchSetsJson, @Nonnull ParserContext context) {
+        static List<PatchSet> fromJsonArray(@Nullable JSONArray patchSetsJson, @Nonnull ParserContext context, MailMap mailMap) {
             List<PatchSet> result = new ArrayList<>();
             if (patchSetsJson != null) {
                 for (int i = 0; i < patchSetsJson.length(); ++i) {
                     JSONObject patchSetJson = patchSetsJson.getJSONObject(i);
-                    result.add(PatchSet.fromJson(patchSetJson, context));
+                    result.add(PatchSet.fromJson(patchSetJson, context, mailMap));
                 }
             }
             return result;
@@ -354,13 +357,13 @@ public class Commit {
             return comments.indexOf(patchSetComment) != -1;
         }
 
-        static PatchSet fromJson(@Nonnull JSONObject patchSetJson, @Nonnull ParserContext context) {
-            Identity uploader = Identity.fromJson(patchSetJson.optJSONObject("uploader"));
+        static PatchSet fromJson(@Nonnull JSONObject patchSetJson, @Nonnull ParserContext context, MailMap mailMap) {
+            Identity uploader = Identity.fromJson(patchSetJson.optJSONObject("uploader"), mailMap);
 
             JSONObject authorJson = patchSetJson.optJSONObject("author");
             Identity author;
             if (authorJson != null) {
-                author = Identity.fromJson(authorJson);
+                author = Identity.fromJson(authorJson, mailMap);
             } else {
                 author = uploader;
             }
@@ -390,8 +393,8 @@ public class Commit {
                     author,
                     patchSetJson.optBoolean("isDraft"),
                     patchSetKind,
-                    Approval.fromJson(patchSetJson.optJSONArray("approvals")),
-                    PatchSetComment.fromJson(patchSetJson.optJSONArray("comments"), createdOnDate),
+                    Approval.fromJson(patchSetJson.optJSONArray("approvals"), mailMap),
+                    PatchSetComment.fromJson(patchSetJson.optJSONArray("comments"), createdOnDate, mailMap),
                     patchSetJson.optInt("sizeInsertions"),
                     patchSetJson.optInt("sizeDeletions")
             );
@@ -431,10 +434,10 @@ public class Commit {
         this.patchSets = ImmutableList.copyOf(patchSets);
     }
 
-    static Commit fromJson(JSONObject commitJson, @Nonnull ParserContext context) {
-        List<Identity> reviewers = Identity.fromJsonArray(commitJson.optJSONArray("allReviewers"));
-        List<ChangeComment> changeComments = ChangeComment.fromJsonArray(commitJson.optJSONArray("comments"));
-        List<PatchSet> patchSets = PatchSet.fromJsonArray(commitJson.optJSONArray("patchSets"), context);
+    static Commit fromJson(JSONObject commitJson, @Nonnull ParserContext context, MailMap mailMap) {
+        List<Identity> reviewers = Identity.fromJsonArray(commitJson.optJSONArray("allReviewers"), mailMap);
+        List<ChangeComment> changeComments = ChangeComment.fromJsonArray(commitJson.optJSONArray("comments"), mailMap);
+        List<PatchSet> patchSets = PatchSet.fromJsonArray(commitJson.optJSONArray("patchSets"), context, mailMap);
 
         return new Commit(
                 commitJson.optString("project"),
@@ -442,7 +445,7 @@ public class Commit {
                 commitJson.optString("id"),
                 commitJson.optInt("number"),
                 commitJson.optString("subject"),
-                Identity.fromJson(commitJson.optJSONObject("owner")),
+                Identity.fromJson(commitJson.optJSONObject("owner"), mailMap),
                 commitJson.optString("url"),
                 commitJson.optString("commitMessage"),
                 commitJson.optLong("createdOn") * SEC_TO_MSEC,
